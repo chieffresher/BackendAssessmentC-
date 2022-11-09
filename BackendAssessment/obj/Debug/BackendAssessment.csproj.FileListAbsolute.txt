@@ -1,0 +1,7 @@
+C:\Users\chieffresher\source\repos\Andela\BackendAssessment\BackendAssessment\bin\Debug\BackendAssessment.exe.config
+C:\Users\chieffresher\source\repos\Andela\BackendAssessment\BackendAssessment\bin\Debug\BackendAssessment.exe
+C:\Users\chieffresher\source\repos\Andela\BackendAssessment\BackendAssessment\bin\Debug\BackendAssessment.pdb
+C:\Users\chieffresher\source\repos\Andela\BackendAssessment\BackendAssessment\obj\Debug\BackendAssessment.csprojAssemblyReference.cache
+C:\Users\chieffresher\source\repos\Andela\BackendAssessment\BackendAssessment\obj\Debug\BackendAssessment.csproj.CoreCompileInputs.cache
+C:\Users\chieffresher\source\repos\Andela\BackendAssessment\BackendAssessment\obj\Debug\BackendAssessment.exe
+C:\Users\chieffresher\source\repos\Andela\BackendAssessment\BackendAssessment\obj\Debug\BackendAssessment.pdb
