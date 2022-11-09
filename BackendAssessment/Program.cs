@@ -75,12 +75,14 @@ namespace BackendAssessment
             double distance = 0;
             foreach (Event evt in events)
             {
-                if(!searchedDistances.ContainsKey(evt.City))
+                if (!searchedDistances.ContainsKey(evt.City))
                 {
                     distance = GetDistance(customer.City, evt.City);
-                    searchedDistances.Add(evt.City, distance );
+                    searchedDistances.Add(evt.City, distance);
                     eventDistances.Add(evt, distance);
                 }
+                else
+                    eventDistances.Add(evt, searchedDistances[evt.City]);
             }
 
             //sort searched result
@@ -120,6 +122,8 @@ namespace BackendAssessment
                     searchedDistances.Add(evt.City, distance);
                     eventDistances.Add(evt, distance);
                 }
+                else
+                    eventDistances.Add(evt, searchedDistances[evt.City]);
             }
 
             //sort searched result
