@@ -18,10 +18,15 @@ namespace BackendAssessment
         public string City { get; set; }
     }
 
+
     public class Solution
     {
+        public static Dictionary<string, double> distancesBetweenCities;
+
         static void Main(string[] args)
         {
+            distancesBetweenCities = new Dictionary<string, double>();
+
             var events = new List<Event>{
                                             new Event{ Name = "Phantom of the Opera", City = "New York"},
                                             new Event{ Name = "Metallica", City = "Los Angeles"},
@@ -37,121 +42,111 @@ namespace BackendAssessment
             // then add to email.
             var customer = new Customer { Name = "Mr. Fake", City = "New York" };
 
+            //compute and save distances between cities into a dictionary
+            populateDistanceBetweenCities(events, customer);
+
             //send email of events in customer's location
+            Console.WriteLine("Sending events happening in customer's city:");
             SendEventsToCustomer(customer, events);
+
+            //send to closest
+            Console.WriteLine("Sending five events closest to customer's city:");
+            SendClosestEvents(customer, events);
+           
+            Console.ReadLine();
 
         }
 
+        public static void populateDistanceBetweenCities(List<Event> events,Customer customer)
+        {
+            //get unique cities
+            List<string> uniqCities = events.Select(e => e.City).Distinct().ToList();
+            
+            //cross-product of cities excluding city to itself
+            var crossProduct = from city1 in uniqCities
+                               from city2 in uniqCities
+                               where city1 != city2
+                               select new { city1, city2 };
+
+            double distance = 0;
+            foreach (var entry in crossProduct)
+            {
+                if (!(distancesBetweenCities.ContainsKey(entry.city1 + "#" + entry.city2) ||
+                    distancesBetweenCities.ContainsKey(entry.city2 + "#" + entry.city1)))
+                {
+                    distance = GetDistance(entry.city1, entry.city2);
+                    distancesBetweenCities.Add(entry.city1 + "#" + entry.city2, distance);
+                    //we could store city2 to city1 as well as shown below but that represent avoidable memory usage
+                    //distancesBetweenCities.Add(entry.city2 + "#" + entry.city1, distance);
+                }
+            }
+        }
+
+        public static double getDistanceBetweenCities(string city1, string city2)
+        {
+            if (city1.Equals(city2))
+                return 0;
+            double distance = 0;
+            //if distance is not in dictionary then compute it and add to dict
+            string key1 = city1 + "#" + city2;
+            string key2 = city2 + "#" + city1;
+            if (!(distancesBetweenCities.ContainsKey(key1) || distancesBetweenCities.ContainsKey(key2)))
+            {
+                distance = GetDistance(city1, city2);
+                distancesBetweenCities.Add(key1, distance);
+            }
+
+            distance = distancesBetweenCities.ContainsKey(key1) == true ? 
+                distancesBetweenCities[key1] : distancesBetweenCities[key2];
+
+            return distance;
+        }
+      
         static void SendEventsToCustomer(Customer customer, List<Event> events)
         {
-            //conduct linear search for events matching customer city
-            // for each such event send email to customer about it
-            bool foundMatchingEvent = false;
-            foreach(Event evnt in events)
-            {
-                if (evnt.Name.Equals(customer.City))
-                {
-                    if(!foundMatchingEvent)
-                     foundMatchingEvent = true;
-                    //send email
-                    AddToEmail(customer, evnt);
-                }
-                    
-            }
-            // if customer has no event matching his city then send him email for all events to maximize our chances 
-            // of selling events to him
-            if (!foundMatchingEvent)
-                foreach (Event evnt in events)
-                    AddToEmail(customer, evnt);
+            //select events matching customer city
+            IEnumerable<Event> eventsInCustomerCity = from evt in events
+                                                       where evt.City.Equals(customer.City)
+                                                       select evt;
+            //get distances and send events
+            foreach(Event evt in eventsInCustomerCity)
+                AddToEmail(customer, evt);
         }
 
         static void SendClosestEvents(Customer customer, List<Event> events)
         {
-            /*GetDistance may be an expensive method so we should avoid calling it unnecessarily. 
-             * To achieve this we keep a dictionary of already computed distances.
-             */
-            Dictionary<string, double> searchedDistances = new Dictionary<string, double>();
-            Dictionary<Event, double> eventDistances = new Dictionary<Event, double>();
-            double distance = 0;
-            foreach (Event evt in events)
+            //sort distance between cities dictionary by distances
+            var sortedDistances = distancesBetweenCities.OrderBy(dc => dc.Value).Select(dc => dc);
+            // send to 5 closest cities
+            //send email to 5 closest cities
+            int count = 0;
+            string otherCity = "";
+           foreach(var dc in sortedDistances)
             {
-                if (!searchedDistances.ContainsKey(evt.City))
+                if(dc.Key.Contains("#"+customer.City) || dc.Key.Contains(customer.City+"#"))
                 {
-                    distance = GetDistance(customer.City, evt.City);
-                    searchedDistances.Add(evt.City, distance);
-                    eventDistances.Add(evt, distance);
+                    //get events happening at this city
+                    otherCity = dc.Key.Contains("#" + customer.City) ? dc.Key.Split('#')[0] : dc.Key.Split('#')[1];
+                    IEnumerable<Event> eventsAtCity = from evt in events
+                                                      where evt.City.Equals(otherCity)
+                                                      select evt;
+                   
+                    foreach(Event evt in eventsAtCity)
+                    {
+                        AddToEmail(customer, evt);
+                        count++;
+                        if (count >= 5)
+                            return;
+                    }
+                      
                 }
-                else
-                    eventDistances.Add(evt, searchedDistances[evt.City]);
             }
 
-            //sort searched result
-            List<SortedDistance> sortedDistances = new List<SortedDistance>();
-            foreach (var item in eventDistances)
-                sortedDistances.Add(new SortedDistance { Event = item.Key, Distance = item.Value });
-            sortedDistances.Sort();
-            //send email to 5 closest cities
-            for (int i = 0; i < 5 && i < sortedDistances.Count; i++)
-                AddToEmail(customer, sortedDistances[i].Event);
-        }
-
-        //Question 3:
-        Dictionary<string, double> searchedDistances = new Dictionary<string, double>();
-        static void SendClosestEventsImprovement(Customer customer, List<Event> events,Dictionary<string,double> searchedDistances)
-        {
-            /*GetDistance may be an expensive method so we should avoid calling it unnecessarily. 
-             * To achieve this we keep a dictionary of already computed distances.
-             */
             
-            Dictionary<Event, double> eventDistances = new Dictionary<Event, double>();
-            double distance = 0;
-            foreach (Event evt in events)
-            {
-                //check if results is global dictionary
-                if (!searchedDistances.ContainsKey(evt.City))
-                {
-                    try
-                    {
-                        distance = GetDistance(customer.City, evt.City);
-                    }
-                    catch(Exception )
-                    {
-                           distance = 0;
-                    }
-                    
-                    searchedDistances.Add(evt.City, distance);
-                    eventDistances.Add(evt, distance);
-                }
-                else
-                    eventDistances.Add(evt, searchedDistances[evt.City]);
-            }
-
-            //sort searched result
-            List<SortedDistance> sortedDistances = new List<SortedDistance>();
-            foreach (var item in eventDistances)
-                sortedDistances.Add(new SortedDistance { Event = item.Key, Distance = item.Value });
-            sortedDistances.Sort();
-            //send email to 5 closest cities
-            for (int i = 0; i < 5 && i < sortedDistances.Count; i++)
-                AddToEmail(customer, sortedDistances[i].Event);
         }
 
 
-        class SortedDistance : IComparable
-        {
-            public Event Event { set; get; }
-            public double Distance { set; get; }
-            public int CompareTo(Object obj)
-            {
-                if (obj == null)
-                    return 1;
-                SortedDistance otherObjet = obj as SortedDistance;
-                if (otherObjet != null)
-                    return this.Distance.CompareTo(otherObjet.Distance);
-                else
-                   throw new ArgumentException("Object is not a valid DistanceFromCity");
-            }
-        }
+
 
         /*Answers to Question 1 :
          * 
@@ -199,12 +194,38 @@ namespace BackendAssessment
 
 
         //code below is just dummies for API methods
-        static void AddToEmail(Customer cus, Event evt)
-        { }
-        static double GetDistance(string fromCity,string toCity)
+        static void AddToEmail(Customer c, Event e, int? price = null)
         {
-            return 0.00;
+            var distance = GetDistance(c.City, e.City);
+            Console.Out.WriteLine($"{c.Name}: {e.Name} in {e.City}"
+            + (distance > 0 ? $" ({distance} miles away)" : "")
+            + (price.HasValue ? $" for ${price}" : ""));
         }
+        static int GetPrice(Event e)
+        {
+            return (AlphebiticalDistance(e.City, "") + AlphebiticalDistance(e.Name, "")) / 10;
+        }
+        static int GetDistance(string fromCity, string toCity)
+        {
+            return AlphebiticalDistance(fromCity, toCity);
+        }
+        private static int AlphebiticalDistance(string s, string t)
+        {
+            var result = 0;
+            var i = 0;
+            for (i = 0; i < Math.Min(s.Length, t.Length); i++)
+            {
+                // Console.Out.WriteLine($"loop 1 i={i} {s.Length} {t.Length}");
+                result += Math.Abs(s[i] - t[i]);
+            }
+            for (; i < Math.Max(s.Length, t.Length); i++)
+            {
+                // Console.Out.WriteLine($"loop 2 i={i} {s.Length} {t.Length}");
+                result += s.Length > t.Length ? s[i] : t[i];
+            }
+            return result;
+        }
+
     }
 }
 
